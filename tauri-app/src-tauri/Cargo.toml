@@ -1,0 +1,32 @@
+[package]
+name = "workaid"
+version = "3.1.0"
+description = "WorkAid · 本地批量文档工具"
+edition = "2021"
+rust-version = "1.77"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+# --- 本机环境必需的 workaround（勿删）------------------------------------
+# schemars 0.8.22 由 tauri-build / tauri-utils 在「构建域」拉起，其
+# preserve_order 特性依赖 indexmap 1.9.3。该版本 build.rs 用 autocfg 探测
+# sysroot 中的 std，本机探测失败（autocfg could not probe for `std`）
+# → has_std 未置位 → IndexMap<K,V> 少了默认泛型参数 S → schemars 报 E0107。
+# 显式开启 std 特性可让它跳过探测直接 emit。
+# 必须写在 [build-dependencies] 域，feature 才能与 schemars 合并
+#（写进 [dependencies] 无效，schemars 属于构建域）。
+indexmap1 = { package = "indexmap", version = "1.9", features = ["std"] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+indexmap1 = { package = "indexmap", version = "1.9", features = ["std"] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

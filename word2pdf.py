@@ -802,6 +802,7 @@ class Word2PDFApp:
             self.status_var.set("正在停止…")
             return
 
+        _ensure_com()          # 惰性探测 pywin32（converters 已不在导入期加载 COM）
         if not HAS_WIN32:
             messagebox.showerror(
                 "错误", "缺少 pywin32 组件，无法调用 Word 转换。\n请安装：pip install pywin32")
@@ -1070,6 +1071,7 @@ def main():
             pass
         return
 
+    _ensure_com()              # 惰性探测 pywin32（converters 已不在导入期加载 COM）
     if not HAS_WIN32:
         try:
             root = tk.Tk()

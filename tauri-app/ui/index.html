@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>WorkAid</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  /* 骨架阶段：未接引擎时的占位样式 */
+  .skeleton-note {
+    font-size: 11.5px; color: var(--fg3); text-align: center;
+    padding: 6px 0 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ======================= 侧栏 ======================= -->
+  <aside class="side" id="side">
+    <div class="brand">
+      <div class="logo" id="brandLogo"><img src="assets/logo.png" alt="WorkAid"></div>
+      <div>
+        <b>WorkAid</b>
+        <i id="brandVer">v3.1.0</i>
+      </div>
+    </div>
+    <!-- 分组与导航由 pages.js 渲染 -->
+    <div id="navHost"></div>
+    <div class="side-spacer"></div>
+    <div class="nav-foot" id="navFoot">
+      <span class="dot"></span>
+      <span id="footText">正在检测转换引擎…</span>
+    </div>
+  </aside>
+
+  <!-- ======================= 主区 ======================= -->
+  <main class="main">
+
+    <!-- 标题行：标题 + 工具栏同排 -->
+    <header class="pagehead">
+      <div class="titles">
+        <h1 id="pgTitle">Word 转 PDF</h1>
+        <p id="pgSub">批量把 Word 文档转换为 PDF</p>
+      </div>
+      <div class="sp"></div>
+      <div class="tools" id="pgTools"></div>
+    </header>
+
+    <!-- 结果条：完成后出现 -->
+    <div class="result" id="resultBar" style="display:none">
+      <div class="ck">✓</div>
+      <div class="rt">
+        <b id="resultTitle">转换完成</b>
+        <span id="resultSub"></span>
+      </div>
+      <div class="link" id="resultOpen">打开输出文件夹 ↗</div>
+    </div>
+
+    <!-- 列表卡片 -->
+    <section class="body-card">
+      <div class="thead" id="tableHead">
+        <div style="flex:2.4">文件名</div>
+        <div style="flex:0 0 88px">大小</div>
+        <div style="flex:0 0 128px">状态</div>
+        <div style="flex:0 0 62px"></div>
+      </div>
+      <div class="rows" id="rowsHost"></div>
+    </section>
+
+    <!-- 参数区：由 pages.js 按当前页渲染 -->
+    <div class="params" id="paramsHost"></div>
+
+    <!-- 执行条 -->
+    <div class="execbar">
+      <div class="prog idle" id="progWrap"><i id="progBar"></i></div>
+      <div class="st" id="execStatus">就绪</div>
+      <button class="go" id="goBtn" disabled>
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        <span id="goText">开 始</span>
+      </button>
+    </div>
+
+    <!-- 日志抽屉 -->
+    <div class="logbar" id="logBar">
+      <span id="logLabel">运行日志</span>
+      <svg viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 1l3.5 3.5L8 1"/></svg>
+      <span class="ln"></span>
+    </div>
+    <div class="logdrawer" id="logDrawer"></div>
+
+    <div class="appfoot">
+      <span class="sp"></span>
+      <a id="footGithub" title="打开项目主页"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+      <a id="footSupport"><img src="assets/coffee.png" alt="">支持作者</a>
+    </div>
+  </main>
+</div>
+
+<!-- 拖拽提示 -->
+<div class="dropmask" id="dropMask">
+  <div class="dm">
+    <b>松手即添加</b>
+    <p id="dropHint">支持 .doc / .docx 等格式，可整个文件夹拖入</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 打赏弹窗 -->
+<div class="modal-mask" id="donateMask">
+  <div class="modal">
+    <h3>支持作者</h3>
+    <p>WorkAid 永久免费 · 如果帮到了你，欢迎请作者喝一杯</p>
+    <div class="qr"><img src="assets/donate_qr.png" alt="微信赞赏码"></div>
+    <div class="thx">微信扫一扫 · 金额随意 · 感谢支持</div>
+    <button class="btn" id="donateClose">关 闭</button>
+  </div>
+</div>
+
+<script src="pages.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

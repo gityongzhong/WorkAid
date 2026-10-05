@@ -5,15 +5,9 @@ import re
 import sys
 import datetime
 
-# COM 接口（Windows + Word 必需）
-try:
-    import win32com.client as win32
-    import pythoncom
-    HAS_WIN32 = True
-except Exception:
-    HAS_WIN32 = False
-
-from theme import *
+# 注意：本模块**不依赖任何 UI 模块**（theme/widgets/pages），
+# 只做「文件进 → 文件出」的转换，可被 CLI、任意前端或脚本独立调用。
+# A4_W / A4_H / MM_PT 等版面常量在下文自行定义，勿再从 theme 导入。
 __all__ = [
     "A4_H",
     "A4_W",
@@ -26,6 +20,7 @@ __all__ = [
     "WD_FORMAT_PDF",
     "WORD_PROG_IDS",
     "_dispatch_first",
+    "_ensure_com",
     "_ensure_dir",
     "_pixmap_with_opacity",
     "_unique_out_path",
@@ -46,13 +41,38 @@ __all__ = [
 ]
 
 
-# COM 接口（Windows + Word 必需）
-try:
-    import win32com.client as win32
-    import pythoncom
-    HAS_WIN32 = True
-except Exception:
-    HAS_WIN32 = False
+# COM 接口（仅 Word/PPT 转 PDF 需要，Windows + Office/WPS）
+#
+# 【重要·1.14.x 实测坑】这里**不**在导入期 import win32com.client。
+# 原因：`import win32com.client` 会在当前线程初始化 OLE/COM 单线程套间，并创建
+# 一个隐藏消息窗口（窗口标题 OleMainThreadWndName）。在 PyInstaller 冻结环境下，
+# 解释器收尾时 pythoncom 的清理会卡在该窗口上，导致进程"结果已正常输出、却永远
+# 不退出"（连 --list 这种不碰文件的动作也会挂）。源码运行时靠宿主 python.exe 的
+# 收尾路径看不出来，只有打包成 exe 才暴露。
+# 而 PDF/图片类动作（合并/拆分/水印/格式转换/PDF转图/PDF转Word）根本用不到 COM，
+# 因此改为**首次真正需要时**惰性导入，避免无谓地初始化 OLE。
+win32 = None            # 惰性绑定，见 _ensure_com()
+pythoncom = None
+HAS_WIN32 = None        # None=尚未探测 / True=可用 / False=不可用
+
+
+def _ensure_com():
+    """惰性导入并初始化 COM，返回 (win32, pythoncom)。
+
+    仅在 Word/PPT 转 PDF 时调用。失败返回 (None, None)，由调用方给出友好报错。
+    """
+    global win32, pythoncom, HAS_WIN32
+    if HAS_WIN32 is not None:
+        return win32, pythoncom
+    try:
+        import win32com.client as _win32
+        import pythoncom as _pythoncom
+        win32, pythoncom = _win32, _pythoncom
+        HAS_WIN32 = True
+    except Exception:  # noqa: BLE001
+        win32, pythoncom = None, None
+        HAS_WIN32 = False
+    return win32, pythoncom
 
 
 # wdFormatPDF
@@ -68,6 +88,13 @@ WORD_PROG_IDS = ("Word.Application", "KWPS.Application")       # Word / WPS 文�
 
 PPT_PROG_IDS = ("PowerPoint.Application", "KWPP.Application")  # PowerPoint / WPS 演示
 
+# 【v3.0.3 必须保留】PPT 扩展名白名单。
+# 【事故】v1.13.0 五模块拆分时，PPT_EXTS 的定义落到了 pages.py，
+# 而本文件 convert_ppt_to_pdf 里的引用成了孤儿 —— 调用即 NameError，
+# 表现为「PPT 转 PDF 必失败」。此前 tkinter 版同样中招（拆分后无人用过）。
+# 取 pages.py 原元组的超集：v3 界面还接受 .odp / .dps（WPS 格式）。
+PPT_EXTS = (".ppt", ".pptx", ".pptm", ".pps", ".ppsx", ".dps", ".dpt", ".odp")
+
 ENGINE_NAME = {
     "Word.Application": "Microsoft Word",
     "KWPS.Application": "WPS 文字",
@@ -79,10 +106,15 @@ ENGINE_NAME = {
 
 def _dispatch_first(prog_ids):
     """按顺序尝试创建 COM 应用实例，返回 (app, ProgID)；全部失败返回 (None, 最后错误)。"""
+    module, _ = _ensure_com()
+    if module is None:
+        return None, ModuleNotFoundError(
+            "缺少 pywin32（win32com），无法调用 Word/PPT 转换。"
+            "请安装 pywin32，或改用 WPS/其他方式转换。")
     last_err = None
     for pid in prog_ids:
         try:
-            return win32.DispatchEx(pid), pid
+            return module.DispatchEx(pid), pid
         except Exception as err:  # noqa: BLE001
             last_err = err
     return None, last_err
@@ -408,7 +440,8 @@ def images_to_pdf(img_paths, out_pdf, page_mode="auto", margin_mm=10,
                     finally:
                         tmp.close()
                 else:
-                    land = (page_mode == "a4-l")
+                    # 兼容两种横版写法：tkinter 传 "a4-l"，v3 前端曾传 "a4l"
+                    land = page_mode in ("a4-l", "a4l")
                     pw, ph = (A4_H, A4_W) if land else (A4_W, A4_H)
                     src = fitz.open(path)
                     try:

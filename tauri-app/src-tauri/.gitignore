@@ -1,0 +1,7 @@
+# ---- Rust / Tauri 构建产物 ----
+target/
+gen/schemas/
+Cargo.lock.bak
+
+# ---- 前端临时 ----
+node_modules/

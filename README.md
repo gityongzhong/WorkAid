@@ -6,7 +6,7 @@
 
 > 一站式文档批处理工具箱 —— 10 个常用文档处理功能，批量处理，拖拽即用。
 
-一款 Windows 桌面端文档处理工具，基于 Python + Tkinter 开发，界面全部自绘（圆角、深色主题、无描边纯色块风格）。
+一款 Windows 桌面端文档处理工具。v3 起采用 **Tauri 2 + WebView 前端 + Python 转换引擎** 的混合架构：界面现代化（浮岛式侧栏、iOS 深色主题），转换引擎沿用久经打磨的纯 Python 流水线，**文件全程本机处理、不联网**。
 
 ## 功能
 
@@ -27,18 +27,18 @@
 
 ## 下载使用
 
-前往 [Releases](../../releases) 页面下载最新版 `WorkAid_vX.Y.Z.exe`。
+前往 [Releases](../../releases) 页面下载最新版 `WorkAid_vX.Y.Z_免安装版.zip`。
 
-- **免安装**：单文件绿色版，双击即可运行
-- **无需配置**：所有依赖已打包进 exe，目标电脑无需安装 Python、Office 或任何运行库
-- **首次启动稍慢**：单文件版需要解压资源，约 5~10 秒属正常现象
+- **免安装**：解压到任意位置，双击 `WorkAid.exe` 即可运行（`WorkAid.exe` 与 `workaid-cli` 文件夹需放在同一层）
+- **无需配置**：所有依赖已打包，目标电脑无需安装 Python 或任何运行库
+- **首次启动**：Windows 可能提示"未知发布者"（点"更多信息 → 仍要运行"）；首次启动因杀毒扫描可能稍慢，之后秒开
 
 ## 支持作者
 
 WorkAid 永久免费、无广告、无捆绑。如果它帮到了你，欢迎请作者喝杯咖啡 ☕
 
-- **微信打赏**：打开软件 → 页脚右下角「☕ 支持作者」→ 微信扫码
-- 也可以点个 [Star](../../stargazers) 或推荐给朋友，同样是对作者的支持
+- **微信打赏**：打开软件 → 页脚右下角「支持作者」→ 微信扫码
+- 源码托管在 GitHub：页脚「GitHub」可直达仓库，也欢迎点个 [Star](../../stargazers) 或推荐给朋友
 
 ## 环境要求
 
@@ -50,45 +50,75 @@ WorkAid 永久免费、无广告、无捆绑。如果它帮到了你，欢迎请
 
 ## 从源码运行
 
+### v3（Tauri 版，当前主版本）
+
 ```bash
-# 建议使用 Python 3.12（3.15 beta 等版本存在第三方库 ABI 兼容问题）
+# 前置：Node.js 18+、Rust (MSVC)、Python 3.12（转换引擎）
+cd tauri-app
+npm install
+
+# 引擎：先用 PyInstaller 打包 workaid-cli（仓库根目录）
+cd ..
+.venv312\Scripts\python.exe -m PyInstaller --noconfirm WorkAidCLI.spec
+
+# 开发 / 构建
+cd tauri-app
+npx tauri dev          # 开发调试
+npx tauri build        # 产出安装包 + release exe
+```
+
+### 经典版（Python + Tkinter，v1.x，已冻结维护）
+
+```bash
 python -m venv .venv312
 .venv312\Scripts\activate
-
 pip install pymupdf pdf2docx python-docx pillow tkinterdnd2 pywin32 pyinstaller
-
 python word2pdf.py
 ```
 
 ## 打包
 
 ```bash
-.venv312\Scripts\python.exe -m PyInstaller --noconfirm --clean WorkAid.spec
-```
+# v3 引擎（若改过 cli.py / converters.py）
+.venv312\Scripts\python.exe -m PyInstaller --noconfirm WorkAidCLI.spec
 
-产物位于 `dist/WorkAid.exe`。
+# v3 桌面程序（release）
+cd tauri-app && npx tauri build
+```
 
 ## 项目结构
 
 ```
 WorkAid/
-├── word2pdf.py          # 主入口：主窗口与页面装配
-├── pages.py             # 10 个功能页（各标签页的界面与批处理流程）
-├── widgets.py           # 自绘控件（圆角按钮 / 输入框 / 下拉框 / 进度条 / 卡片）
-├── converters.py        # 全部转换与处理函数（无 GUI 依赖）
-├── theme.py             # 主题、配色、DPI 缩放、Windows 标题栏配色
-├── WorkAid.spec         # PyInstaller 打包配置
-├── app.ico              # 应用图标
-├── gen_icons.py         # 图标生成脚本
-├── donate_qr.png        # 微信赞赏码
-└── icons/               # 界面图标资源
+├── tauri-app/               # v3 桌面程序（当前主版本）
+│   ├── ui/                  #   前端（原生 HTML/CSS/JS：主题、10 页配置、主逻辑）
+│   └── src-tauri/           #   Rust 壳（窗口、进程调度、文件系统）
+├── cli.py                   # 转换引擎 CLI 入口（batch 元动作，供 Rust 调用）
+├── converters.py            # 全部转换与处理函数（无 GUI 依赖，v1/v3 共用）
+├── WorkAidCLI.spec          # 引擎 PyInstaller 打包配置（onedir）
+├── word2pdf.py              # 经典版主入口（v1.x，已冻结）
+├── pages.py / widgets.py / theme.py   # 经典版界面模块
+├── WorkAid.spec             # 经典版打包配置
+├── app.ico                  # 应用图标
+└── donate_qr.png            # 微信赞赏码
 ```
 
 ## 版本历史
 
 | 版本 | 变更 |
 | --- | --- |
-| 1.13.1 | 修复「PDF 加水印」切到图片水印后没有选图入口的问题；新增水印图缩略图预览；图片模式自动隐藏不生效的颜色/字号选项 |
+| 3.1.0 | 侧栏「浮岛式」改版：每个分组一块独立深色面板，三层视觉纵深 |
+| 3.0.9 | 移除页脚左侧版本提示文案 |
+| 3.0.8 | 「支持作者」弹窗文案精简 |
+| 3.0.7 | 页脚新增 GitHub 仓库入口（系统浏览器打开） |
+| 3.0.6 | 拖入文件区空状态图标更换并修复居中 |
+| 3.0.5 | 页脚「支持作者」换咖啡杯图标 |
+| 3.0.4 | 全新软件 LOGO（exe 图标 + 界面品牌位） |
+| 3.0.3 | 修复转换成功误报失败、中文乱码、PPT 转 PDF 崩溃、A4 横版失效；全功能矩阵 23/23 通过 |
+| 3.0.2 | 消除转换时弹出的黑色控制台窗口 |
+| 3.0.1 | 性能优化：启动就绪 17.2s → 0.8s，批量转换提速 2.5 倍 |
+| 3.0.0 | 架构重写：Tauri 2 + WebView 前端 + Python 引擎子进程，免安装绿色版 104MB，启动 < 1s |
+| 1.13.1 | 经典版最终版：修复图片水印入口等（其后进入 v3 重写） |
 | 1.13.0 | 新增「图片格式转换」：PNG / JPG / WEBP / BMP / TIFF / ICO 批量互转 |
 | 1.12.8 | "支持作者"弹窗标题文字居中显示 |
 | 1.12.7 | "支持作者"弹窗标题栏不再显示图标，更清爽 |
