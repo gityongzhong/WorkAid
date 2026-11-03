@@ -1,6 +1,11 @@
 /* ============================================================
    WorkAid v3 · 设计令牌（对照 WorkAid_UI设计方案.html 第 4 节）
-   深色主题：5 档灰阶 + iOS 蓝主色
+   两套主题：深色（默认）/ 浅色，由 <html data-theme="light"> 切换
+   ------------------------------------------------------------
+   分层原则：只有「表面 / 文字 / 语义 / 阴影」四类走 token。
+   圆角、尺寸、字体在两套主题下不变，不参与切换。
+   新增颜色时请一律加 token，不要在下方写死字面量——
+   否则浅色主题下会露出深色残块。
    ============================================================ */
 :root {
   /* 灰阶：侧栏 < 浮岛面板 < 窗口 < 卡片 < 输入/悬停 */
@@ -15,22 +20,62 @@
   --c-line-soft: #1B1B20;
   --c-zebra:     #141418;
 
+  /* 表面细分（v3.3.0 从字面量提升为 token） */
+  --c-scroll:      #33333C;
+  --c-scroll-h:    #45454F;
+  --c-row-hover:   #1C1C22;
+  --c-field-focus: #232329;
+  --c-combo-opt:   #1D1D23;
+  --c-icon-hover:  #2C2C34;
+  --c-pill-pend:   #222228;
+  --c-log-line:    #202027;
+  --c-log-bg:      #0D0D10;
+  --c-toast:       #26262D;
+  --c-toast-fg:    #F2F2F7;
+  --c-dm:          rgba(16, 16, 19, .92);
+
   /* 语义色 */
   --c-primary:   #007AFF;
   --c-primary-h: #2B8DFF;
   --c-primary-d: #0057C2;
+  --c-primary-t: #4DA3FF;
   --c-success:   #30D158;
+  --c-success-h: #3EDD66;
   --c-success-t: #4CD96F;
   --c-warning:   #FF9F0A;
   --c-warning-t: #FFB340;
   --c-danger:    #FF453A;
   --c-danger-t:  #FF6B61;
 
+  /* 语义色的浅底 / 徽章底（原为散落的 rgba 字面量） */
+  --c-sel:        rgba(0, 122, 255, .10);
+  --c-pill-ok:    rgba(48, 209, 88, .14);
+  --c-pill-work:  rgba(255, 159, 10, .14);
+  --c-pill-err:   rgba(255, 69, 58, .14);
+  --c-fill-ok:    rgba(48, 209, 88, .08);
+  --c-fill-warn:  rgba(255, 159, 10, .08);
+  --c-fill-warn2: rgba(255, 159, 10, .14);
+  --c-drop-tint:  rgba(0, 122, 255, .10);
+  --c-mask:       rgba(0, 0, 0, .55);
+  --ring-primary: rgba(0, 122, 255, .35);
+
+  /* 语义底上的前景色 */
+  --c-on-primary: #FFFFFF;
+  --c-on-success: #04310F;
+  --c-on-warning: #3A2400;
+
   /* 文字 */
   --fg:   #F2F2F7;
   --fg2:  #98989F;
   --fg3:  #63636A;
   --fg4:  #4C4C55;
+
+  /* 阴影（浅色下需大幅减弱，否则发脏） */
+  --sh-logo:  0 4px 14px rgba(0, 0, 0, .35);
+  --sh-nav:   0 3px 10px rgba(0, 122, 255, .35);
+  --sh-toast: 0 10px 30px rgba(0, 0, 0, .50);
+  --sh-modal: 0 24px 60px rgba(0, 0, 0, .55);
+  --sh-dot:   0 0 8px currentColor;
 
   /* 圆角 */
   --r-card: 14px;
@@ -41,6 +86,76 @@
   --side-w: 210px;
   --page-pad: 22px;
   --row-h: 46px;
+}
+
+/* ------------------------------------------------------------
+   浅色主题：三层纵深反向
+   侧栏底 #ECECF1 < 浮岛面板 #F7F7FA < 卡片/输入 #FFFFFF
+   主色保持 iOS 蓝 #007AFF（白底可用）；
+   语义文字色改用更深变体，保证白底对比度 ≥ 4.5:1。
+   ------------------------------------------------------------ */
+[data-theme="light"] {
+  --c-side:      #ECECF1;
+  --c-island:    #F7F7FA;
+  --c-bg:        #FDFDFE;
+  --c-card:      #FFFFFF;
+  --c-input:     #F0F0F5;
+  --c-hover:     #E6E6ED;
+  --c-pressed:   #E2E2E9;
+  --c-line:      #E3E3EA;
+  --c-line-soft: #EDEDF2;
+  --c-zebra:     #FAFAFC;
+
+  --c-scroll:      #C7C7D0;
+  --c-scroll-h:    #B0B0BA;
+  --c-row-hover:   #F4F4F8;
+  --c-field-focus: #FFFFFF;
+  --c-combo-opt:   #FFFFFF;
+  --c-icon-hover:  #EDEDF2;
+  --c-pill-pend:   #EDEDF2;
+  --c-log-line:    #E3E3EA;
+  --c-log-bg:      #F7F7FA;
+  --c-toast:       #2C2C32;
+  --c-toast-fg:    #FFFFFF;
+  --c-dm:          rgba(255, 255, 255, .96);
+
+  --c-primary:   #007AFF;
+  --c-primary-h: #0068DB;
+  --c-primary-d: #0057C2;
+  --c-primary-t: #2B8DFF;
+  --c-success:   #34C759;
+  --c-success-h: #2EB350;
+  --c-success-t: #248A3D;
+  --c-warning:   #FF9500;
+  --c-warning-t: #A85400;
+  --c-danger:    #FF3B30;
+  --c-danger-t:  #C4271E;
+
+  --c-sel:        rgba(0, 122, 255, .08);
+  --c-pill-ok:    rgba(36, 138, 61, .10);
+  --c-pill-work:  rgba(168, 84, 0, .10);
+  --c-pill-err:   rgba(196, 39, 30, .10);
+  --c-fill-ok:    rgba(52, 199, 89, .10);
+  --c-fill-warn:  rgba(255, 149, 0, .10);
+  --c-fill-warn2: rgba(255, 149, 0, .14);
+  --c-drop-tint:  rgba(0, 122, 255, .06);
+  --c-mask:       rgba(0, 0, 0, .28);
+  --ring-primary: rgba(0, 122, 255, .25);
+
+  --c-on-primary: #FFFFFF;
+  --c-on-success: #FFFFFF;
+  --c-on-warning: #FFFFFF;
+
+  --fg:   #1C1C1E;
+  --fg2:  #616168;
+  --fg3:  #82828A;
+  --fg4:  #9EA0A8;
+
+  --sh-logo:  0 3px 10px rgba(0, 0, 0, .10);
+  --sh-nav:   0 2px 8px rgba(0, 122, 255, .28);
+  --sh-toast: 0 8px 26px rgba(0, 0, 0, .20);
+  --sh-modal: 0 24px 60px rgba(0, 0, 0, .22);
+  --sh-dot:   0 0 6px currentColor;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -62,8 +177,8 @@ body {
 
 ::-webkit-scrollbar { width: 9px; height: 9px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #33333c; border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
-::-webkit-scrollbar-thumb:hover { background: #45454f; background-clip: content-box; }
+::-webkit-scrollbar-thumb { background: var(--c-scroll); border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--c-scroll-h); background-clip: content-box; }
 
 /* ============================================================
    应用外壳
@@ -102,13 +217,37 @@ body {
      背景必须透明——否则容器底色会从图片自身的圆角透明处透出 */
   background: transparent;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 14px rgba(0,0,0,.35);
+  box-shadow: var(--sh-logo);
   overflow: hidden;
 }
 .brand .logo img { width: 100%; height: 100%; object-fit: contain; }
-.brand .logo span { font-size: 19px; font-weight: 700; color: #fff; }
+.brand .logo span { font-size: 19px; font-weight: 700; color: var(--fg); }
 .brand b { font-size: 15px; display: block; line-height: 1.25; font-weight: 700; }
 .brand i { font-style: normal; color: var(--fg3); font-size: 10.5px; }
+.brand .bmeta { flex: 1 1 auto; min-width: 0; }
+
+/* 主题切换按钮（v3.3.0）：品牌行右侧，只显示当前模式对应的图标。
+   三个图标常驻 DOM，切换时靠 html[data-tm] 换显示，不重建节点。 */
+.theme-btn {
+  flex: 0 0 auto;
+  width: 26px; height: 26px;
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  color: var(--fg3);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .12s ease, color .12s ease;
+}
+.theme-btn:hover { background: var(--c-hover); color: var(--fg); }
+.theme-btn:active { background: var(--c-pressed); }
+.theme-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ring-primary); }
+.theme-btn .tm-ic { display: none; width: 15px; height: 15px; }
+html[data-tm="dark"]  .theme-btn .ic-dark,
+html[data-tm="light"] .theme-btn .ic-light,
+html[data-tm="auto"]  .theme-btn .ic-auto,
+html:not([data-tm])   .theme-btn .ic-dark { display: block; }
 
 /* 浮岛面板（v3.1.0）：每个分组一块独立深色面板，
    底色比侧栏底亮一档 + 12px 圆角，组间留白 8px。
@@ -149,9 +288,9 @@ body {
 .nav-item:hover { background: var(--c-pressed); color: var(--fg); }
 .nav-item.on {
   background: var(--c-primary);
-  color: #fff;
+  color: var(--c-on-primary);
   font-weight: 600;
-  box-shadow: 0 3px 10px rgba(0,122,255,.35);
+  box-shadow: var(--sh-nav);
 }
 .nav-item.on svg { opacity: 1; }
 
@@ -173,8 +312,8 @@ body {
   background: var(--fg3);
   transition: background .2s;
 }
-.nav-foot.ok  .dot { background: var(--c-success); box-shadow: 0 0 8px rgba(48,209,88,.6); }
-.nav-foot.bad .dot { background: var(--c-danger);  box-shadow: 0 0 8px rgba(255,69,58,.6); }
+.nav-foot.ok  .dot { background: var(--c-success); color: var(--c-success); box-shadow: var(--sh-dot); }
+.nav-foot.bad .dot { background: var(--c-danger);  color: var(--c-danger);  box-shadow: var(--sh-dot); }
 .nav-foot span { font-size: 11px; color: var(--fg2); line-height: 1.3; }
 
 /* ---------------- 主区 ---------------- */
@@ -234,7 +373,7 @@ body {
 .btn svg { width: 13px; height: 13px; }
 .btn:hover { background: var(--c-hover); }
 .btn:active { background: var(--c-pressed); }
-.btn.pri { background: var(--c-primary); color: #fff; font-weight: 600; }
+.btn.pri { background: var(--c-primary); color: var(--c-on-primary); font-weight: 600; }
 .btn.pri:hover { background: var(--c-primary-h); }
 .btn.pri:active { background: var(--c-primary-d); }
 .btn.ghost { background: transparent; color: var(--fg2); }
@@ -281,9 +420,9 @@ body {
   transition: background .1s;
 }
 .row:nth-child(odd) { background: var(--c-zebra); }
-.row:hover { background: #1C1C22; }
+.row:hover { background: var(--c-row-hover); }
 .row.sel {
-  background: rgba(0,122,255,.10);
+  background: var(--c-sel);
   box-shadow: inset 2px 0 0 var(--c-primary);
 }
 .row > .c { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
@@ -322,10 +461,10 @@ body {
   font-weight: 600;
   white-space: nowrap;
 }
-.pill.ok   { background: rgba(48,209,88,.14);  color: var(--c-success-t); }
-.pill.pend { background: #222228;               color: var(--fg3); }
-.pill.work { background: rgba(255,159,10,.14); color: var(--c-warning-t); }
-.pill.err  { background: rgba(255,69,58,.14);  color: var(--c-danger-t); }
+.pill.ok   { background: var(--c-pill-ok);   color: var(--c-success-t); }
+.pill.pend { background: var(--c-pill-pend);  color: var(--fg3); }
+.pill.work { background: var(--c-pill-work); color: var(--c-warning-t); }
+.pill.err  { background: var(--c-pill-err);  color: var(--c-danger-t); }
 
 /* 行内小按钮（上移/下移/移除） */
 .row-tools { display: flex; gap: 4px; opacity: 0; transition: opacity .12s; }
@@ -336,7 +475,7 @@ body {
   border: none; background: transparent; color: var(--fg2);
   border-radius: 6px; cursor: pointer;
 }
-.iconbtn:hover { background: #2C2C34; color: var(--fg); }
+.iconbtn:hover { background: var(--c-icon-hover); color: var(--fg); }
 .iconbtn svg { width: 13px; height: 13px; }
 
 /* ---------------- 空状态 ---------------- */
@@ -417,7 +556,7 @@ body {
 .field.wide { flex: 1 1 auto; min-width: 180px; }
 .field.num { width: 78px; }
 .field.text { width: 150px; }
-.field:focus { background: #232329; box-shadow: 0 0 0 2px rgba(0,122,255,.35); }
+.field:focus { background: var(--c-field-focus); box-shadow: 0 0 0 2px var(--ring-primary); }
 
 /* 复选框 */
 .check {
@@ -461,8 +600,8 @@ body {
   background-position: right 11px center;
 }
 .combo:hover { background-color: var(--c-hover); }
-.combo:focus { box-shadow: 0 0 0 2px rgba(0,122,255,.35); }
-.combo option { background: #1D1D23; color: var(--fg); }
+.combo:focus { box-shadow: 0 0 0 2px var(--ring-primary); }
+.combo option { background: var(--c-combo-opt); color: var(--fg); }
 
 .hint { color: var(--fg3); font-size: 11.5px; }
 
@@ -490,7 +629,7 @@ body {
   height: 100%;
   width: 0%;
   border-radius: var(--r-pill);
-  background: linear-gradient(90deg, #007AFF, #4DA3FF);
+  background: linear-gradient(90deg, var(--c-primary), var(--c-primary-t));
   transition: width .25s ease, background .25s;
 }
 .execbar .prog i.done { background: var(--c-success); }
@@ -502,7 +641,7 @@ body {
   padding: 0 24px;
   border-radius: 10px;
   background: var(--c-primary);
-  color: #fff;
+  color: var(--c-on-primary);
   font-weight: 700;
   font-size: 13px;
   font-family: inherit;
@@ -516,8 +655,8 @@ body {
 }
 .execbar .go svg { width: 14px; height: 14px; }
 .execbar .go:hover { background: var(--c-primary-h); }
-.execbar .go.done { background: var(--c-success); color: #04310F; }
-.execbar .go.done:hover { background: #3EDD66; }
+.execbar .go.done { background: var(--c-success); color: var(--c-on-success); }
+.execbar .go.done:hover { background: var(--c-success-h); }
 .execbar .go:disabled { opacity: .35; cursor: not-allowed; }
 .execbar .go:disabled:hover { background: var(--c-primary); }
 
@@ -525,24 +664,24 @@ body {
 .result {
   flex: 0 0 auto;
   margin: 10px var(--page-pad) 0;
-  background: rgba(48,209,88,.08);
+  background: var(--c-fill-ok);
   border-radius: var(--r-card);
   padding: 10px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
 }
-.result.warn { background: rgba(255,159,10,.08); }
+.result.warn { background: var(--c-fill-warn); }
 .result .ck {
   width: 22px; height: 22px; flex: 0 0 22px;
   border-radius: 50%;
   background: var(--c-success);
-  color: #04310F;
+  color: var(--c-on-success);
   font-weight: 800;
   display: flex; align-items: center; justify-content: center;
   font-size: 12px;
 }
-.result.warn .ck { background: var(--c-warning); color: #3A2400; }
+.result.warn .ck { background: var(--c-warning); color: var(--c-on-warning); }
 .result .rt { min-width: 0; }
 .result b { font-size: 12.8px; display: block; }
 .result span { color: var(--fg2); font-size: 12px; }
@@ -572,12 +711,12 @@ body {
 .logbar:hover { color: var(--fg2); }
 .logbar svg { width: 9px; height: 6px; transition: transform .15s; flex: 0 0 9px; }
 .logbar.open svg { transform: rotate(180deg); }
-.logbar .ln { flex: 1; height: 1px; background: #202027; }
+.logbar .ln { flex: 1; height: 1px; background: var(--c-log-line); }
 
 .logdrawer {
   flex: 0 0 auto;
   margin: 0 var(--page-pad) 12px;
-  background: #0D0D10;
+  background: var(--c-log-bg);
   border-radius: var(--r-card);
   max-height: 168px;
   overflow-y: auto;
@@ -599,7 +738,7 @@ body {
 .dropmask {
   position: fixed;
   inset: 0;
-  background: rgba(0,122,255,.10);
+  background: var(--c-drop-tint);
   backdrop-filter: blur(2px);
   display: none;
   align-items: center;
@@ -612,7 +751,7 @@ body {
   border: 2px dashed var(--c-primary);
   border-radius: 18px;
   padding: 34px 54px;
-  background: rgba(16,16,19,.92);
+  background: var(--c-dm);
   text-align: center;
 }
 .dropmask .dm b { font-size: 15px; display: block; }
@@ -624,12 +763,12 @@ body {
   bottom: 22px;
   left: 50%;
   transform: translateX(-50%) translateY(70px);
-  background: #26262D;
-  color: var(--fg);
+  background: var(--c-toast);
+  color: var(--c-toast-fg);
   border-radius: 10px;
   padding: 9px 18px;
   font-size: 12.5px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.5);
+  box-shadow: var(--sh-toast);
   opacity: 0;
   transition: opacity .2s, transform .2s;
   z-index: 200;
@@ -666,7 +805,7 @@ body {
 .modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, .55);
+  background: var(--c-mask);
   display: none;
   align-items: center;
   justify-content: center;
@@ -679,7 +818,7 @@ body {
   padding: 26px 28px 20px;
   width: 300px;
   text-align: center;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, .55);
+  box-shadow: var(--sh-modal);
 }
 .modal h3 { font-size: 16px; font-weight: 700; }
 .modal p { color: var(--fg2); font-size: 12px; margin-top: 4px; }
@@ -697,3 +836,114 @@ body {
 .modal .qr img { width: 100%; height: 100%; object-fit: contain; }
 .modal .thx { color: var(--fg3); font-size: 11.5px; margin-top: 8px; }
 .modal .btn { margin-top: 14px; width: 100%; height: 34px; }
+
+/* ---------------- 引擎缺失引导弹窗（v3.2.0） ----------------
+   比打赏弹窗更宽、左对齐：里面要放「目录结构示意」和「查找路径列表」，
+   居中对齐会让多行路径很难读。 */
+.modal-wide {
+  width: 460px;
+  text-align: left;
+  padding: 24px 26px 18px;
+}
+.modal-wide h3 { text-align: center; }
+.modal-wide > p { text-align: center; line-height: 1.7; margin-top: 6px; }
+.modal-wide > p b { color: var(--fg); font-weight: 600; }
+
+.warn-ic {
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 10px;
+  border-radius: 50%;
+  background: var(--c-fill-warn2);
+  color: var(--c-warning);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tree-hint {
+  margin-top: 14px;
+  background: var(--c-input);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.tree-hint .th-t { font-size: 11px; color: var(--fg3); margin-bottom: 5px; }
+.tree-hint pre {
+  margin: 0;
+  font-family: ui-monospace, Consolas, "Courier New", monospace;
+  font-size: 11.5px;
+  line-height: 1.75;
+  color: var(--fg2);
+  white-space: pre;
+  user-select: text;
+}
+
+.prob { margin-top: 12px; }
+.prob-t { font-size: 11px; color: var(--fg3); margin-bottom: 4px; }
+.prob-list { max-height: 150px; overflow-y: auto; }
+/* 每条候选两行：第一行「来源 + 命中状态」，第二行路径独占整宽。
+   路径单独占行才能把末尾的 workaid-cli.exe 完整露出来。 */
+.cand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+.cand-from { flex: 1 1 auto; color: var(--fg2); white-space: nowrap; }
+.cand-st { flex: 0 0 auto; color: var(--c-danger); font-weight: 600; }
+.cand code {
+  flex: 1 1 100%;
+  min-width: 0;
+  font-family: ui-monospace, Consolas, "Courier New", monospace;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--fg3);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  user-select: text;
+}
+.cand.ok .cand-st { color: var(--c-success); }
+
+.modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+.modal-actions .btn { flex: 1 1 0; width: auto; margin-top: 0; height: 34px; }
+.modal .modal-close { margin-top: 8px; width: 100%; }
+
+/* ============================================================
+   主题切换（v3.3.0）
+   ------------------------------------------------------------
+   ① 切换瞬间给 <html> 挂 .theme-switching，只在过渡期启用颜色动画，
+      避免把 hover 的手感一起改掉；220ms 后由 JS 摘掉。
+   ② 浅色下「白卡片 / 白窗口」靠色阶分不开，补一层发丝描边。
+      深色下不加大面积描边（会显得脏），保持纯色阶分层。
+   ============================================================ */
+html.theme-switching,
+html.theme-switching * {
+  transition: background-color .18s ease, border-color .18s ease,
+              color .18s ease, box-shadow .18s ease !important;
+}
+
+[data-theme="light"] .body-card,
+[data-theme="light"] .pcard,
+[data-theme="light"] .execbar,
+[data-theme="light"] .logdrawer,
+[data-theme="light"] .modal {
+  border: 1px solid var(--c-line-soft);
+}
+
+/* 浅色下选中项是实心蓝 + 白字，投影要收一点，否则外圈发灰 */
+[data-theme="light"] .nav-item.on { box-shadow: var(--sh-nav); }
+
+/* 浅色下空状态图标反相：原图是深灰圆盘 + 白箭头，直接放到白卡片上
+   会变成一个过重的大黑饼。反相后是浅灰圆盘 + 深箭头，和浅色主题的
+   其他图标同一语感；深色下保持原样不动。 */
+[data-theme="light"] .empty .ring img {
+  filter: invert(1) contrast(1.06);
+  opacity: .92;
+}

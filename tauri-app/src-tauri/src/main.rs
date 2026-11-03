@@ -34,6 +34,88 @@ fn resolve_cli() -> PathBuf {
     PathBuf::from("workaid-cli")
 }
 
+/// 当前 exe 所在目录（引擎的标准位置就在这里）。
+fn app_dir() -> Option<PathBuf> {
+    std::env::current_exe()
+        .ok()
+        .and_then(|e| e.parent().map(|p| p.to_path_buf()))
+}
+
+/// 引擎探活详情：不仅给出最终路径，还把「按顺序找过哪些地方」一并返回。
+///
+/// 为什么需要（v3.2.0）：普通用户遇到「未检测到转换引擎」完全无从下手。
+/// 前端拿 candidates 直接列给用户看，他自己对照一下 exe 旁边有没有
+/// workaid-cli 文件夹就能定位问题，省掉一轮人工答疑。
+fn probe_cli() -> Value {
+    let mut candidates: Vec<Value> = Vec::new();
+    let app = app_dir();
+
+    // ① 环境变量 WORKAID_CLI（优先级最高，给「引擎放在别处」的场景留口子）
+    if let Ok(p) = std::env::var("WORKAID_CLI") {
+        let p = p.trim().to_string();
+        if !p.is_empty() {
+            let pb = PathBuf::from(&p);
+            let ok = pb.exists();
+            candidates.push(serde_json::json!({
+                "from": "环境变量 WORKAID_CLI",
+                "path": pb.display().to_string(),
+                "exists": ok,
+            }));
+            if ok {
+                return serde_json::json!({
+                    "engine": pb.display().to_string(),
+                    "exists": true,
+                    "source": "环境变量 WORKAID_CLI",
+                    "app_dir": app.as_ref().map(|d| d.display().to_string()).unwrap_or_default(),
+                    "candidates": candidates,
+                });
+            }
+        }
+    }
+
+    // ② 程序目录（绿色版的标准布局）
+    if let Some(dir) = &app {
+        let tries: [(&str, &str); 2] = [
+            ("workaid-cli/workaid-cli.exe", "程序目录\\workaid-cli\\"),
+            ("workaid-cli.exe", "程序目录（与 exe 同层）"),
+        ];
+        for (rel, label) in tries {
+            let cand = dir.join(rel);
+            let ok = cand.exists();
+            candidates.push(serde_json::json!({
+                "from": label,
+                "path": cand.display().to_string(),
+                "exists": ok,
+            }));
+            if ok {
+                return serde_json::json!({
+                    "engine": cand.display().to_string(),
+                    "exists": true,
+                    "source": label,
+                    "app_dir": dir.display().to_string(),
+                    "candidates": candidates,
+                });
+            }
+        }
+    }
+
+    // ③ 最后退回 PATH（不做预检，交给 Command 自己查；开发者可选方式）
+    candidates.push(serde_json::json!({
+        "from": "系统 PATH（可选）",
+        "path": "workaid-cli".to_string(),
+        "exists": false,
+        "note": "开发者可把 workaid-cli 加入 PATH，普通用户无需关心",
+    }));
+
+    serde_json::json!({
+        "engine": "workaid-cli",
+        "exists": false,
+        "source": "未找到",
+        "app_dir": app.as_ref().map(|d| d.display().to_string()).unwrap_or_default(),
+        "candidates": candidates,
+    })
+}
+
 /// 从子进程 stdout 里取最后一行可解析的 JSON（前面可能夹着 progress 行）。
 fn last_json(stdout: &str) -> Option<Value> {
     stdout
@@ -124,15 +206,17 @@ fn engine_actions() -> Result<Value, String> {
 }
 
 /// 探活：引擎路径 + 一次极轻量的自描述调用，用于侧栏底部状态灯。
+/// 缺失时同时返回查找过的候选路径，供前端「引擎缺失」引导弹窗展示。
 #[tauri::command]
 fn engine_status() -> Value {
-    let cli = resolve_cli();
-    let exists = cli.exists();
-    serde_json::json!({
-        "engine": cli.display().to_string(),
-        "exists": exists,
-        "claude_note": "仅表示引擎文件是否存在；实际可用性由每次调用的结果决定",
-    })
+    let mut v = probe_cli();
+    if let Some(obj) = v.as_object_mut() {
+        obj.insert(
+            "claude_note".to_string(),
+            serde_json::json!("仅表示引擎文件是否存在；实际可用性由每次调用的结果决定"),
+        );
+    }
+    v
 }
 
 /// 通用动作调用：前端「转换」按钮走这里。
@@ -414,7 +498,7 @@ fn rename_files(items: Vec<RenameItem>) -> Value {
 fn app_info() -> Value {
     serde_json::json!({
         "name": "WorkAid",
-        "version": "3.1.0",
+        "version": "3.3.0",
         "tauri": "2.x",
         "platform": std::env::consts::OS,
         "arch": std::env::consts::ARCH,

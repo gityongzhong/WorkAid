@@ -3,6 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <title>WorkAid</title>
+<script>
+  /* 主题预置（v3.3.0）——必须放在样式表之前，且只能同步执行。
+     否则浅色用户每次启动都会先闪一帧深色再跳变。
+     这里只读偏好 + 写 html 属性，不做任何异步动作。 */
+  (function () {
+    try {
+      var m = localStorage.getItem('wa-theme') || 'dark';
+      var sys = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      var t = (m === 'auto') ? sys : m;
+      var r = document.documentElement;
+      r.setAttribute('data-tm', m);
+      r.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+    } catch (e) { /* 隐私模式禁 localStorage 时退回深色 */ }
+  })();
+</script>
 <link rel="stylesheet" href="theme.css">
 <style>
   /* 骨架阶段：未接引擎时的占位样式 */
@@ -20,10 +35,30 @@
   <aside class="side" id="side">
     <div class="brand">
       <div class="logo" id="brandLogo"><img src="assets/logo.png" alt="WorkAid"></div>
-      <div>
+      <div class="bmeta">
         <b>WorkAid</b>
-        <i id="brandVer">v3.1.0</i>
+        <i id="brandVer">v3.3.0</i>
       </div>
+      <!-- 主题切换：点击循环 深色 → 浅色 → 跟随系统。
+           三个图标常驻 DOM，由 html[data-tm] 决定显示哪个，
+           避免每次切换重建节点（会导致 hover 状态闪一下）。 -->
+      <button class="theme-btn" id="themeBtn" type="button"
+              title="主题：深色（点击切换）" aria-label="切换主题">
+        <svg class="tm-ic ic-dark" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+             stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13.5 9.2A5.7 5.7 0 1 1 6.8 2.5a4.6 4.6 0 0 0 6.7 6.7z"/>
+        </svg>
+        <svg class="tm-ic ic-light" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+             stroke-width="1.4" stroke-linecap="round">
+          <circle cx="8" cy="8" r="3.1"/>
+          <path d="M8 1.2v1.5M8 13.3v1.5M1.2 8h1.5M13.3 8h1.5M3.2 3.2l1.1 1.1M11.7 11.7l1.1 1.1M12.8 3.2l-1.1 1.1M4.3 11.7l-1.1 1.1"/>
+        </svg>
+        <svg class="tm-ic ic-auto" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+             stroke-width="1.4">
+          <circle cx="8" cy="8" r="5.8"/>
+          <path d="M8 2.2a5.8 5.8 0 0 1 0 11.6z" fill="currentColor" stroke="none"/>
+        </svg>
+      </button>
     </div>
     <!-- 分组与导航由 pages.js 渲染 -->
     <div id="navHost"></div>
@@ -115,6 +150,33 @@
     <div class="qr"><img src="assets/donate_qr.png" alt="微信赞赏码"></div>
     <div class="thx">微信扫一扫 · 金额随意 · 感谢支持</div>
     <button class="btn" id="donateClose">关 闭</button>
+  </div>
+</div>
+
+<!-- 引擎缺失引导弹窗（v3.2.0） -->
+<div class="modal-mask" id="engineMask">
+  <div class="modal modal-wide">
+    <div class="warn-ic">!</div>
+    <h3>没有找到转换引擎</h3>
+    <p>WorkAid 需要 <b>workaid-cli</b> 这个文件夹才能处理文件，<br>它必须和 <b>WorkAid.exe</b> 放在同一个文件夹里。</p>
+
+    <div class="tree-hint">
+      <div class="th-t">正确的文件夹结构</div>
+      <pre>WorkAid.exe
+workaid-cli\
+  workaid-cli.exe</pre>
+    </div>
+
+    <div class="prob">
+      <div class="prob-t">刚才在这些位置找过：</div>
+      <div class="prob-list" id="engineCands"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" id="engineOpenDir">打开程序文件夹</button>
+      <button class="btn pri" id="engineRecheck">重新检测</button>
+    </div>
+    <button class="btn ghost sm modal-close" id="engineClose">稍后再说</button>
   </div>
 </div>
 

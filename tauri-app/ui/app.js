@@ -46,8 +46,12 @@
   }
 
   async function mockInvoke(cmd, args) {
-    if (cmd === 'app_info') return { name: 'WorkAid', version: '3.1.0', tauri: '2.x', platform: 'windows', arch: 'x86_64' };
-    if (cmd === 'engine_status') return { engine: '(mock) workaid-cli.exe', exists: true };
+    if (cmd === 'app_info') return { name: 'WorkAid', version: '3.3.0', tauri: '2.x', platform: 'windows', arch: 'x86_64' };
+    if (cmd === 'engine_status') return {
+      engine: '(mock) workaid-cli.exe', exists: true, source: '程序目录\\workaid-cli\\',
+      app_dir: '(mock) 程序目录',
+      candidates: [{ from: '程序目录\\workaid-cli\\', path: '(mock) workaid-cli.exe', exists: true }],
+    };
     if (cmd === 'engine_actions') return { available: true, engine: '(mock)', actions: PAGES.filter(p => p.action).map(p => ({ name: p.action, required: [], desc: p.title })) };
     if (cmd === 'file_meta_many') return (args.paths || []).map((p) => ({
       ok: true, path: p, name: H.baseName(p) + H.extOf(p), dir: H.dirOf(p),
@@ -571,6 +575,12 @@
       return runFrontendOnly(p);
     }
 
+    // 引擎缺失时提前拦住：别让用户拖完一堆文件、点开始才失败
+    if (S.engineOk === false) {
+      log('转换引擎不可用，已阻止本次执行', 'err');
+      return openEngineHelp();
+    }
+
     S.running = true;
     updateGo();
     setGo('run');
@@ -740,12 +750,160 @@
     const sp = $('footSupport');
     if (sp && !sp.dataset.bound) { sp.dataset.bound = '1'; sp.addEventListener('click', openDonate); }
   }
+  /* ---------- 主题切换（v3.3.0） ----------
+     三种模式：dark / light / auto（跟随系统）。
+     设计要点：
+     ① 颜色只看 <html data-theme="dark|light">，由 theme.css 的两套 token 驱动；
+        data-tm 记录的是「模式」（含 auto），两者分开，auto 才能表达清楚。
+     ② 首帧由 index.html 头部的内联脚本预先决定，这里只负责后续变更。
+     ③ 切换瞬间给 <html> 挂 .theme-switching 打开颜色过渡，220ms 后摘掉，
+        这样只有换主题有动画，hover 手感不受影响。 */
+  const THEME_KEY = 'wa-theme';
+  const THEME_MODES = ['dark', 'light', 'auto'];
+  const THEME_LABEL = { dark: '深色', light: '浅色', auto: '跟随系统' };
+  let themeMode = 'dark';
+
+  function sysTheme() {
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)
+      ? 'light' : 'dark';
+  }
+
+  /* 让系统标题栏跟随。Win11 有效；Win10 不支持深色标题栏，
+     会保持系统色，界面本身不受影响，故失败也不提示。 */
+  function syncWindowTheme(resolved) {
+    try {
+      const t = window.__TAURI__;
+      if (!t || !t.window || !t.window.getCurrentWindow) return;
+      t.window.getCurrentWindow().setTheme(themeMode === 'auto' ? null : resolved);
+    } catch (e) { /* 浏览器预览 / 旧版 WebView 下忽略 */ }
+  }
+
+  function applyTheme(mode, persist) {
+    themeMode = THEME_MODES.indexOf(mode) >= 0 ? mode : 'dark';
+    const resolved = themeMode === 'auto' ? sysTheme() : themeMode;
+    const root = document.documentElement;
+
+    root.classList.add('theme-switching');
+    root.setAttribute('data-tm', themeMode);
+    root.setAttribute('data-theme', resolved);
+    syncWindowTheme(resolved);
+
+    clearTimeout(applyTheme._timer);
+    applyTheme._timer = setTimeout(() => root.classList.remove('theme-switching'), 240);
+
+    const btn = $('themeBtn');
+    if (btn) btn.title = '主题：' + THEME_LABEL[themeMode] + '（点击切换）';
+
+    if (persist) {
+      try { localStorage.setItem(THEME_KEY, themeMode); } catch (e) {}
+    }
+    return resolved;
+  }
+
+  function cycleTheme() {
+    const next = THEME_MODES[(THEME_MODES.indexOf(themeMode) + 1) % THEME_MODES.length];
+    applyTheme(next, true);
+    toast('主题：' + THEME_LABEL[next]);
+  }
+
+  function initTheme() {
+    let saved = 'dark';
+    try { saved = localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) {}
+    applyTheme(saved, false);
+
+    const btn = $('themeBtn');
+    if (btn && !btn.dataset.bound) {
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', cycleTheme);
+    }
+    // auto 模式下，系统切换主题要实时跟随
+    if (window.matchMedia) {
+      try {
+        window.matchMedia('(prefers-color-scheme: light)')
+          .addEventListener('change', () => { if (themeMode === 'auto') applyTheme('auto', false); });
+      } catch (e) { /* 旧内核只支持 addListener，忽略即可 */ }
+    }
+  }
+
+  /* ---------- 引擎缺失引导弹窗（v3.2.0） ----------
+     背景：引擎缺失原先只在侧栏底部显示一行小字，普通用户看不到也修不了。
+     现在启动检测失败即弹窗，把「找过哪些路径」直接列出来，
+     并给「打开程序文件夹」按钮，用户自己对照就能定位。 */
+  let engineInfo = null;   // 最近一次 engine_status 的完整结果
+
+  function openEngineHelp(info) {
+    if (info) engineInfo = info;
+    const list = $('engineCands');
+    /* 路径太长会把关键信息（末尾的 workaid-cli.exe）挤掉，
+       这里做「中间省略」：保留盘符开头 + 末尾两级，完整路径挂 title。 */
+    const midShort = (p) => {
+      const s = String(p || '');
+      if (s.length <= 66) return s;
+      return s.slice(0, 20) + '…' + s.slice(-45);
+    };
+    if (list) {
+      const cands = (engineInfo && engineInfo.candidates) || [];
+      list.innerHTML = cands.length
+        ? cands.map((c) => `<div class="cand${c.exists ? ' ok' : ''}">
+             <span class="cand-from">${esc(c.from)}</span>
+             <span class="cand-st">${c.exists ? '✓' : '✗'}</span>
+             <code title="${esc(c.path)}">${esc(midShort(c.path))}</code>
+           </div>`).join('')
+        : '<div class="cand"><code>（没能取到路径信息）</code></div>';
+    }
+    $('engineMask').classList.add('show');
+  }
+
+  function closeEngineHelp() { $('engineMask').classList.remove('show'); }
+
+  function engineOpenDir() {
+    const dir = (engineInfo && engineInfo.app_dir) || '';
+    if (!dir) return toast('无法定位程序所在文件夹');
+    invoke('open_path', { path: dir }).catch((e) => toast('打开失败：' + e));
+  }
+
+  async function engineRecheck() {
+    const btn = $('engineRecheck');
+    btn.disabled = true;
+    btn.textContent = '检测中…';
+    try {
+      const st = await invokeT('engine_status', null, 5000);
+      engineInfo = st || null;
+      const foot = $('navFoot');
+      if (st && st.exists) {
+        S.engineOk = true;
+        foot.classList.remove('bad');
+        foot.classList.add('ok');
+        $('footText').textContent = '就绪 · 转换引擎可用';
+        closeEngineHelp();
+        log('转换引擎已就绪：' + st.engine, 'ok');
+        toast('转换引擎已就绪');
+      } else {
+        S.engineOk = false;
+        openEngineHelp(st);
+        toast('仍未找到转换引擎');
+      }
+    } catch (e) {
+      toast('检测失败：' + e);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '重新检测';
+    }
+  }
+
+  $('engineClose').addEventListener('click', closeEngineHelp);
+  $('engineOpenDir').addEventListener('click', engineOpenDir);
+  $('engineRecheck').addEventListener('click', engineRecheck);
+  $('engineMask').addEventListener('click', (e) => {
+    if (e.target === $('engineMask')) closeEngineHelp();
+  });
+
   $('donateClose').addEventListener('click', closeDonate);
   $('donateMask').addEventListener('click', (e) => {
     if (e.target === $('donateMask')) closeDonate();
   });
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeDonate();
+    if (e.key === 'Escape') { closeDonate(); closeEngineHelp(); }
   });
 
   /* ---------- 纯前端页（图片重命名） ---------- */
@@ -960,6 +1118,7 @@
      ============================================================ */
   function boot() {
     // ① 界面立即渲染（纯 DOM，零 invoke）
+    initTheme();                  // 主题先定，避免后续渲染出现深浅混搭的一帧
     renderNav();
     renderPage();
     renderParams();
@@ -975,6 +1134,8 @@
     const start = () => {
       setTimeout(backendChecks, 30);
       bindTauriDragDrop();        // 真实路径拖拽（Tauri 环境）
+      // 窗口就绪后再同步一次标题栏主题：boot 瞬间 __TAURI__ 可能还没注入
+      syncWindowTheme(themeMode === 'auto' ? sysTheme() : themeMode);
     };
     if (document.readyState === 'complete') start();
     else window.addEventListener('load', start);
@@ -987,6 +1148,9 @@
       switchPage,
       helpers: H,
       setParam: (k, v) => { S.params[k] = v; },
+      theme: () => ({ mode: themeMode, resolved: document.documentElement.getAttribute('data-theme') }),
+      setTheme: (m) => applyTheme(m, true),
+      cycleTheme,
     };
   }
 
@@ -1017,6 +1181,7 @@
     // 若确实需要，可用 --verbose 思路在开发时手动触发（见 checkEngineActions）。
     probe('engine_status', null, 2500, (st) => {
       const foot = $('navFoot');
+      engineInfo = st || null;
       if (st && st.exists) {
         foot.classList.add('ok');
         $('footText').textContent = '就绪 · 转换引擎可用';
@@ -1026,12 +1191,14 @@
         $('footText').textContent = '未检测到转换引擎';
         S.engineOk = false;
         log('未检测到 workaid-cli.exe，转换功能不可用', 'err');
+        openEngineHelp(st);   // 关键：别让用户只看到一行小字
       }
     }, () => {
       $('navFoot').classList.add('bad');
       $('footText').textContent = '引擎检测失败';
       S.engineOk = false;
       log('引擎状态检测失败（IPC 持续未响应）', 'err');
+      // IPC 超时不等于引擎缺失，不弹引导窗（否则会误导用户去搬文件）
     });
   }
 
