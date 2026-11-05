@@ -498,7 +498,7 @@ fn rename_files(items: Vec<RenameItem>) -> Value {
 fn app_info() -> Value {
     serde_json::json!({
         "name": "WorkAid",
-        "version": "3.3.0",
+        "version": "3.3.1",
         "tauri": "2.x",
         "platform": std::env::consts::OS,
         "arch": std::env::consts::ARCH,

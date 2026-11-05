@@ -27,7 +27,7 @@
 
 ## 下载使用
 
-前往 [Releases](../../releases) 页面下载最新版 `WorkAid_vX.Y.Z_portable.zip`（v3.1.0 起）。
+前往 [WorkAid-releases](https://github.com/gityongzhong/WorkAid-releases/releases/latest) 页面下载最新版 `WorkAid_vX.Y.Z_portable.zip`（v3.1.0 起）。下载仓库只放安装包，源码不公开。
 
 - **免安装**：解压到任意位置，双击 `WorkAid.exe` 即可运行（`WorkAid.exe` 与 `workaid-cli` 文件夹需放在同一层）
 - **无需配置**：所有依赖已打包，目标电脑无需安装 Python 或任何运行库

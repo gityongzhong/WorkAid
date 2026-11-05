@@ -46,7 +46,7 @@
   }
 
   async function mockInvoke(cmd, args) {
-    if (cmd === 'app_info') return { name: 'WorkAid', version: '3.3.0', tauri: '2.x', platform: 'windows', arch: 'x86_64' };
+    if (cmd === 'app_info') return { name: 'WorkAid', version: '3.3.1', tauri: '2.x', platform: 'windows', arch: 'x86_64' };
     if (cmd === 'engine_status') return {
       engine: '(mock) workaid-cli.exe', exists: true, source: '程序目录\\workaid-cli\\',
       app_dir: '(mock) 程序目录',
@@ -737,8 +737,9 @@
   function openDonate() { $('donateMask').classList.add('show'); }
   function closeDonate() { $('donateMask').classList.remove('show'); }
 
-  /* 项目主页：交给系统默认浏览器打开 */
-  const GITHUB_URL = 'https://github.com/gityongzhong/WorkAid';
+  /* 项目主页：交给系统默认浏览器打开
+     指向公开的下载仓库 —— 源码仓库已转为私有，链过去会是 404 */
+  const GITHUB_URL = 'https://github.com/gityongzhong/WorkAid-releases';
   function openGithub() {
     invoke('open_url', { url: GITHUB_URL }).catch((e) => toast('打开链接失败：' + e));
   }

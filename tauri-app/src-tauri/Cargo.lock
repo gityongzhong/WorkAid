@@ -4370,7 +4370,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "workaid"
-version = "3.3.0"
+version = "3.3.1"
 dependencies = [
  "indexmap 1.9.3",
  "serde",

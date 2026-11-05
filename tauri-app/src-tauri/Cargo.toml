@@ -1,6 +1,6 @@
 [package]
 name = "workaid"
-version = "3.3.0"
+version = "3.3.1"
 description = "WorkAid · 本地批量文档工具"
 edition = "2021"
 rust-version = "1.77"
